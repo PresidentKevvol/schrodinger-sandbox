@@ -1,0 +1,27 @@
+body {
+  font-family: sans-serif;
+}
+
+h1, h2, h3 {
+  font-weight: normal;
+}
+
+.mid {
+  width: 80vw;
+}
+
+.mid input[type='number']{
+  width: 4.5em;
+}
+
+canvas.func-plots {
+  height: 25em;
+}
+
+input#eigenfunc-display-slider {
+  width: 60%;
+}
+
+input#wave-t {
+  width: 7em;
+}
