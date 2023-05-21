@@ -10,6 +10,14 @@ h1, h2, h3 {
   width: 80vw;
 }
 
+.remove-x {
+  color: gray;
+  float: right;
+}
+.remove-x:hover {
+  color: crimson;
+}
+
 .mid input[type='number']{
   width: 4.5em;
 }
@@ -26,7 +34,7 @@ canvas.func-plots {
 */
 
 input#eigenfunc-display-slider {
-  width: 60%;
+  width: 70vh;
 }
 
 input#wave-t {

@@ -11,6 +11,8 @@ var func_psi_init;
 var wave_largest_amp;
 var t;
 
+var psi0_transform_clicked = false;
+
 // number of eigenstates we are displaying
 var num_eigenwaves;
 // array of eigen values i.e. quantized energies
@@ -24,6 +26,7 @@ var graph_v;
 var graph_eigenwaves;
 var graph_init_psi;
 var graph_wave_progression;
+var graph_prob_progression;
 
 //the slider for eigenfunctions
 var eigenfunc_slider;
@@ -107,10 +110,29 @@ function ijs_setup() {
     }
   }];
 
+  graph_prob_progression = new Chart("plot-prob-dist-progression", {
+    type: "line",
+    data: {},
+    options: graph_options
+  });
+  graph_prob_progression.options.animation = {duration: 0};
+  graph_prob_progression.options.scales['yAxes'] = [{
+    display: true,
+    ticks: {
+      min: 0, // minimum value
+      max: 1 // maximum value
+    }
+  }];
+
   document.getElementById("plot-v-btn").addEventListener("click", plot_v_clicked);
   document.getElementById("solve-eigenfuncs").addEventListener("click", solve_eigenwaves_clicked);
   document.getElementById("plot-init-psi-btn").addEventListener("click", plot_psi0_clicked);
   document.getElementById("plot-init-psi-transform-btn").addEventListener("click", transform_psi0_clicked);
+
+  var add_fn_btns = document.getElementsByClassName("add-function-piece-btn");
+  for (var i=0; i<add_fn_btns.length; i++) {
+    add_fn_btns[i].addEventListener("click", add_fn_piece_clicked);
+  }
 
   eigenfunc_slider = document.getElementById("eigenfunc-display-slider");
   eigenfunc_slider.addEventListener("input", eigenfunc_slider_slided);
@@ -314,7 +336,7 @@ function plot_psi0_clicked() {
     fill: false,
     label: 'Ψ(x, t=0)',
     pointRadius: 0,
-    borderColor: "rgba(255,0,0,0.8)",
+    borderColor: "rgba(0,31,255,0.8)",
     data: func_psi_init
   }];
   graph_init_psi.update();
@@ -376,8 +398,12 @@ async function transform_psi0_clicked() {
   pyodide.runPython("eig_fn_weights = basis_transform(psi_0, Psi_standing, array_dx)");
   //display the wave in the animation graph
   graph_wave_progression.data.labels = x_values;
+  graph_prob_progression.data.labels = x_values;
   //calculate the largest amplitude to fit wave in box of graph
   wave_largest_amp = pyodide.runPython("largest_amplitude(eig_fn_weights, Psi_standing)");
+  
+  psi0_transform_clicked = true;
+  
   // graph_wave_progression.options.scales.yAxes.min = -wave_largest_amp;
   // graph_wave_progression.options.scales.yAxes.max = wave_largest_amp;
   time_field.dispatchEvent(new Event("input"));
@@ -400,7 +426,7 @@ function eigenfunc_slider_slided(event) {
 }
 
 function time_field_changed(event) {
-  if (!psi_standing) {
+  if (!psi0_transform_clicked) {
     return;
   }
 
@@ -411,14 +437,21 @@ function time_field_changed(event) {
   pyodide.runPython("wave_at_t = series_wavefn_attime(eig_fn_weights, Psi_standing, eigEnergies, t)");
   pyodide.runPython("wave_at_t_real = np.real(wave_at_t)");
   pyodide.runPython("wave_at_t_imag = np.imag(wave_at_t)");
+  pyodide.runPython("prob_at_t = np.real(wave_at_t * np.conj(wave_at_t))");
+  // pyodide.runPython("prob_at_t = wave_at_t_real ** 2 + wave_at_t_imag ** 2");
 
   //convert them to js array to display on graph
   var wave_real = pyodide.runPython("wave_at_t_real");
   var wave_imag = pyodide.runPython("wave_at_t_imag");
+  var prob_fn = pyodide.runPython("prob_at_t");
   var wave_real_j = [];
   for(var j=0; j<wave_real.length; j++) {wave_real_j.push(wave_real.get(j));}
   var wave_imag_j = [];
   for(var j=0; j<wave_imag.length; j++) {wave_imag_j.push(wave_imag.get(j));}
+  var prob_fn_j = [];
+  for(var j=0; j<prob_fn.length; j++) {prob_fn_j.push(prob_fn.get(j));}
+
+  console.log(prob_fn_j);
 
   graph_wave_progression.data.datasets = [{
     fill: false,
@@ -435,6 +468,31 @@ function time_field_changed(event) {
     data: wave_imag_j
   }];
   graph_wave_progression.update();
+
+  graph_prob_progression.data.datasets = [{
+    fill: false,
+    label: 'probability distribution function',
+    pointRadius: 0,
+    borderColor: "rgba(239,0,0,0.9)",
+    data: prob_fn_j
+  }];
+  graph_prob_progression.update();
+}
+
+function add_fn_piece_clicked(event) {
+  var targ_div = event.target.parentElement.getElementsByClassName("equation-pieces-set")[0];
+  var template = document.getElementById("templates").getElementsByClassName("equation-piece")[0];
+  var clon = template.cloneNode(true);
+
+  clon.getElementsByClassName("remove-x")[0].addEventListener("click", remove_x_clicked);
+
+  targ_div.appendChild(clon);
+}
+
+function remove_x_clicked(event) {
+  var piece_div = event.target.parentElement;
+  var parent = piece_div.parentElement;
+  parent.removeChild(piece_div);
 }
 
 document.addEventListener("DOMContentLoaded", ijs_setup);

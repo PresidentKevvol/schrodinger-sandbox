@@ -27,12 +27,13 @@
         <link rel="stylesheet" href="index.css">
     </head>
     <body>
-        <template hidden="hidden">
+        <div hidden="hidden" id="templates">
           <div class="equation-piece">
+            <div class="remove-x">x</div>
             <math-field class="equation-piece-field"></math-field>
             \(x \in [ \) <input type="number" value="-10" step="0.01" class="range-low">, <input type="number" value="10" step="0.01" class="range-high"> \( ] \)
           </div>
-        </template>
+        </div>
 
         <h1>Schrodinger's Sandbox</h1>
         <h2>Numerical Solutions to Quantum Wave Functions Simulator</h2>
@@ -52,7 +53,7 @@
               \(x \in [ \) <input type="number" value="-10" step="0.01" class="range-low">, <input type="number" value="10" step="0.01" class="range-high"> \( ] \)
             </div>
           </div>
-          <button>+ add function piece</button>
+          <button class="add-function-piece-btn">+ add function piece</button>
         </div>
 
         <div id="mid-3" class="mid">
@@ -64,6 +65,7 @@
 
         <div id="mid-4" class="mid">
           <button id="solve-eigenfuncs">Solve for standing waves</button><br>
+          (Move the slider to see different standing wave functions!)<br>
           <input type="range" id="eigenfunc-display-slider" min="0" max="0" value="0" step="1"><br>
           <div class="graph-contain">
             <canvas id="plot-eigen-waves" class="func-plots" width="2000" height="1400"></canvas>
@@ -79,7 +81,7 @@
               \(x \in [ \) <input type="number" value="-8" step="0.01" class="range-low">, <input type="number" value="0" step="0.01" class="range-high"> \( ] \)
             </div>
           </div>
-          <button>+ add function piece</button>
+          <button class="add-function-piece-btn">+ add function piece</button>
         </div>
 
         <div id="mid-6" class="mid">
@@ -94,6 +96,9 @@
           t: <input type="number" value="0" min="0" step="0.01" id="wave-t"> <button id="play-wave">play</button>
           <div class="graph-contain">
             <canvas id="plot-wave-progression" class="func-plots" width="2000" height="1400"></canvas>
+          </div>
+          <div class="graph-contain">
+            <canvas id="plot-prob-dist-progression" class="func-plots" width="2000" height="1400"></canvas>
           </div>
         </div>
 
