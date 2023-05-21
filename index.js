@@ -7,6 +7,8 @@ var hbar = 1;
 var x_values;
 var func_v;
 var func_psi_init;
+
+var wave_largest_amp;
 var t;
 
 // number of eigenstates we are displaying
@@ -18,8 +20,9 @@ var eigen_energies;
 var psi_standing;
 
 //graph elements
-var graph_init_psi_v;
+var graph_v;
 var graph_eigenwaves;
+var graph_init_psi;
 var graph_wave_progression;
 
 //the slider for eigenfunctions
@@ -63,11 +66,16 @@ function ijs_setup() {
       }
     },
     scales: {
-      x: {display: false}
+      xAxes: [{
+        ticks: {
+            autoSkip: true,
+            maxTicksLimit: 10,
+        }
+      }]
     }
   };
 
-  graph_init_psi_v = new Chart("plot-potential-init-wave", {
+  graph_v = new Chart("plot-potential", {
     type: "line",
     data: {},
     options: graph_options
@@ -79,15 +87,30 @@ function ijs_setup() {
     options: graph_options
   });
 
+  graph_init_psi = new Chart("plot-init-wave", {
+    type: "line",
+    data: {},
+    options: graph_options
+  });
+
   graph_wave_progression = new Chart("plot-wave-progression", {
     type: "line",
     data: {},
     options: graph_options
   });
   graph_wave_progression.options.animation = {duration: 0};
+  graph_wave_progression.options.scales['yAxes'] = [{
+    display: true,
+    ticks: {
+      min: -1, // minimum value
+      max: 1 // maximum value
+    }
+  }];
 
-  document.getElementById("plot-init").addEventListener("click", plot_v_psi_clicked);
+  document.getElementById("plot-v-btn").addEventListener("click", plot_v_clicked);
   document.getElementById("solve-eigenfuncs").addEventListener("click", solve_eigenwaves_clicked);
+  document.getElementById("plot-init-psi-btn").addEventListener("click", plot_psi0_clicked);
+  document.getElementById("plot-init-psi-transform-btn").addEventListener("click", transform_psi0_clicked);
 
   eigenfunc_slider = document.getElementById("eigenfunc-display-slider");
   eigenfunc_slider.addEventListener("input", eigenfunc_slider_slided);
@@ -129,6 +152,13 @@ def series_wavefn_attime(coeffes, psi_fns, E_vals, t):
     return sum([coeffes[i] * psi_fns[i] * np.exp(-1j * E_vals[i] * t / hbar) for i in range(l)])
 `;
 
+//computes the largest possible amplitude given an initial wave in basis form
+var largest_amplitude_py = `
+def largest_amplitude(coeffes, psi_fns):
+    l = len(coeffes)
+    return sum([np.abs(coeffes[i]) * np.amax(np.abs(psi_fns[i])) for i in range(l)])
+`;
+
 //setup pyodide to be used
 async function pyodide_setup() {
   //setup pyodide
@@ -155,6 +185,7 @@ async function pyodide_setup() {
   pyodide.runPython(solve_TISE_py);
   pyodide.runPython(wave_basis_transform_py);
   pyodide.runPython(series_at_t_py);
+  pyodide.runPython(largest_amplitude_py);
 
   pyodide.runPython("from js import hbar");
   
@@ -181,7 +212,10 @@ function generate_function_array(sect, lower_bound, upper_bound, dx) {
   var yvals = [];
 
   // for each value of x in the domain space
-  for (var x=lower_bound; x<=upper_bound; x+=dx) {
+  var total_len = (upper_bound - lower_bound)/dx;
+  //x=lower_bound; x<=upper_bound; x+=dx
+  for (var j=0; j<=total_len; j++) {
+    var x = lower_bound + j * dx;
     var y = 0;
     //check each piecewise piece on the widget to get the y value corresponding to current x
     for (var i=0; i<pieces.length; i++) {
@@ -198,6 +232,21 @@ function generate_function_array(sect, lower_bound, upper_bound, dx) {
     yvals.push(y);
   }
   return [xvals, yvals];
+}
+
+// normalize a wave function array so it integrates to 1 over the entire domain
+function normalize_function_array(ay, dx) {
+  var sum = 0;
+  for(var i=0; i<ay.length; i++) {
+    sum += ay[i] * ay[i];
+  }
+  intg = Math.sqrt(sum * dx);
+
+  for(var i=0; i<ay.length; i++) {
+    ay[i] = ay[i] / intg
+  }
+
+  return ay;
 }
 
 function plot_function_graph(vas_id, xvals, yvals) {
@@ -233,43 +282,51 @@ function test_run() {
   plot_function_graph("plot-potential-init-wave", b[0], b[1]);
 }
 
-function plot_v_psi_clicked() {
-  psi_field = document.getElementById("equation-pieces-set-psi");
-  psi = generate_function_array(psi_field, -10, 10, array_dx);
+function plot_v_clicked() {
   v_field = document.getElementById("equation-pieces-set-v");
   v = generate_function_array(v_field, -10, 10, array_dx);
 
   x_values = v[0];
-  func_psi_init = psi[1];
   func_v = v[1];
 
   //plot_function_graph("plot-potential-init-wave", b[0], b[1]);
-  graph_init_psi_v.data.labels = x_values;
-  graph_init_psi_v.data.datasets = [{
+  graph_v.data.labels = x_values;
+  graph_v.data.datasets = [{
     fill: false,
     label: 'V(x)',
     pointRadius: 0,
     borderColor: "rgba(191,191,0,0.8)",
     data: func_v
-  },
-  {
+  }];
+  graph_v.update();
+}
+
+function plot_psi0_clicked() {
+  psi_field = document.getElementById("equation-pieces-set-psi");
+  psi = generate_function_array(psi_field, -10, 10, array_dx);
+  psi[1] = normalize_function_array(psi[1], array_dx);
+
+  func_psi_init = psi[1];
+
+  //plot_function_graph("plot-potential-init-wave", b[0], b[1]);
+  graph_init_psi.data.labels = x_values;
+  graph_init_psi.data.datasets = [{
     fill: false,
     label: 'Ψ(x, t=0)',
     pointRadius: 0,
     borderColor: "rgba(255,0,0,0.8)",
     data: func_psi_init
   }];
-  graph_init_psi_v.update();
+  graph_init_psi.update();
 }
 
 // when 'Solve for standing waves' button is clicked
 async function solve_eigenwaves_clicked() {
   // import the arrays
-  pyodide.runPython("from js import array_dx, x_values, func_v, func_psi_init");
+  pyodide.runPython("from js import array_dx, x_values, func_v");
   // convert to numpy arrays
   pyodide.runPython("x = np.array(list(x_values))");
   pyodide.runPython("v = np.array(list(func_v))");
-  pyodide.runPython("psi_0 = np.array(list(func_psi_init))");
 
   console.log("function arrays loaded");
 
@@ -281,7 +338,9 @@ async function solve_eigenwaves_clicked() {
   var t2 = getTimestamp();
   console.log("solver method finished, time taken: " + (t2 - t1));
 
-  pyodide.runPython("l = int(eigFuncs.shape[0] ** 0.5)");
+  // pyodide.runPython("l = int(eigFuncs.shape[0] ** 0.5)");
+  pyodide.runPython("l = int(eigFuncs.shape[0] / 8)");
+  // pyodide.runPython("l = np.sum(eigEnergies < np.amax(v))");
   // extract and normalize the standing waves
   pyodide.runPython("Psi_standing = [eigFuncs[:,i] / (array_dx ** 0.5) for i in range(l)]");
 
@@ -303,11 +362,24 @@ async function solve_eigenwaves_clicked() {
   graph_eigenwaves.data.labels = x_values;
   eigenfunc_slider.setAttribute("max", num_eigenwaves - 1);
   eigenfunc_slider.dispatchEvent(new Event("input"));
+}
+
+async function transform_psi0_clicked() {
+  // import the arrays
+  pyodide.runPython("from js import func_psi_init");
+  // convert to numpy arrays
+  pyodide.runPython("psi_0 = np.array(list(func_psi_init))");
+
+  console.log("function arrays loaded");
 
   //basis transform psi(x, 0) to coefficients
   pyodide.runPython("eig_fn_weights = basis_transform(psi_0, Psi_standing, array_dx)");
   //display the wave in the animation graph
   graph_wave_progression.data.labels = x_values;
+  //calculate the largest amplitude to fit wave in box of graph
+  wave_largest_amp = pyodide.runPython("largest_amplitude(eig_fn_weights, Psi_standing)");
+  // graph_wave_progression.options.scales.yAxes.min = -wave_largest_amp;
+  // graph_wave_progression.options.scales.yAxes.max = wave_largest_amp;
   time_field.dispatchEvent(new Event("input"));
 }
 

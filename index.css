@@ -14,9 +14,16 @@ h1, h2, h3 {
   width: 4.5em;
 }
 
+div.graph-contain {
+  max-width: 70vh;
+  max-height: 49vh;
+}
+
+/*
 canvas.func-plots {
   height: 25em;
 }
+*/
 
 input#eigenfunc-display-slider {
   width: 60%;
