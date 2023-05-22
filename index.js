@@ -453,7 +453,7 @@ function time_field_changed(event) {
   var prob_fn_j = [];
   for(var j=0; j<prob_fn.length; j++) {prob_fn_j.push(prob_fn.get(j));}
 
-  console.log(prob_fn_j);
+  // console.log(prob_fn_j);
 
   if (graph_wave_progression.data.datasets.length > 0) {
     graph_wave_progression.data.datasets[0].data = wave_real_j;
