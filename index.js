@@ -128,6 +128,7 @@ function ijs_setup() {
   document.getElementById("solve-eigenfuncs").addEventListener("click", solve_eigenwaves_clicked);
   document.getElementById("plot-init-psi-btn").addEventListener("click", plot_psi0_clicked);
   document.getElementById("plot-init-psi-transform-btn").addEventListener("click", transform_psi0_clicked);
+  document.getElementById("play-wave").addEventListener("click", play_clicked);
 
   var add_fn_btns = document.getElementsByClassName("add-function-piece-btn");
   for (var i=0; i<add_fn_btns.length; i++) {
@@ -138,6 +139,7 @@ function ijs_setup() {
   eigenfunc_slider.addEventListener("input", eigenfunc_slider_slided);
   time_field = document.getElementById("wave-t");
   time_field.addEventListener("input", time_field_changed);
+  document.getElementById("wave-anim-speed").addEventListener("input", wave_speed_changed);
 }
 
 //python function to solve the TISE given v(x) and psi(x, 0) as arrays
@@ -453,29 +455,39 @@ function time_field_changed(event) {
 
   console.log(prob_fn_j);
 
-  graph_wave_progression.data.datasets = [{
-    fill: false,
-    label: 'real',
-    pointRadius: 0,
-    borderColor: "rgba(0,31,255,0.9)",
-    data: wave_real_j
-  },
-  {
-    fill: false,
-    label: 'imag',
-    pointRadius: 0,
-    borderColor: "rgba(255,127,0,0.9)",
-    data: wave_imag_j
-  }];
+  if (graph_wave_progression.data.datasets.length > 0) {
+    graph_wave_progression.data.datasets[0].data = wave_real_j;
+    graph_wave_progression.data.datasets[1].data = wave_imag_j;
+
+  } else {
+    graph_wave_progression.data.datasets = [{
+      fill: false,
+      label: 'real',
+      pointRadius: 0,
+      borderColor: "rgba(0,31,255,0.9)",
+      data: wave_real_j
+    },
+    {
+      fill: false,
+      label: 'imag',
+      pointRadius: 0,
+      borderColor: "rgba(255,127,0,0.9)",
+      data: wave_imag_j
+    }];
+  }
   graph_wave_progression.update();
 
-  graph_prob_progression.data.datasets = [{
-    fill: false,
-    label: 'probability distribution function',
-    pointRadius: 0,
-    borderColor: "rgba(239,0,0,0.9)",
-    data: prob_fn_j
-  }];
+  if (graph_prob_progression.data.datasets.length > 0) {
+    graph_prob_progression.data.datasets[0].data = prob_fn_j;
+  } else {
+    graph_prob_progression.data.datasets = [{
+      fill: false,
+      label: 'probability distribution function',
+      pointRadius: 0,
+      borderColor: "rgba(239,0,0,0.9)",
+      data: prob_fn_j
+    }];
+  }
   graph_prob_progression.update();
 }
 
@@ -493,6 +505,39 @@ function remove_x_clicked(event) {
   var piece_div = event.target.parentElement;
   var parent = piece_div.parentElement;
   parent.removeChild(piece_div);
+}
+
+var wave_anim_playing = false;
+var wave_anim_interval;
+
+function play_clicked(event) {
+  if (!psi0_transform_clicked) {
+    return;
+  }
+
+  var btn = event.target;
+  if (wave_anim_playing) {
+    clearInterval(wave_anim_interval);
+    btn.innerHTML = 'play';
+    wave_anim_playing = false;
+  } else {
+    wave_anim_interval = setInterval(wave_animation, 40);
+    btn.innerHTML = 'stop';
+    wave_anim_playing = true;
+  }
+}
+
+//interval function for animating the wave function
+function wave_animation() {
+  //time_field.value = parseFloat(time_field.value) + parseFloat(time_field.getAttribute('step'));
+  time_field.stepUp();
+  time_field.dispatchEvent(new Event("input"));
+}
+
+//when animation speed changed
+function wave_speed_changed(event) {
+  var val = event.target.value;
+  time_field.setAttribute('step', val);
 }
 
 document.addEventListener("DOMContentLoaded", ijs_setup);
